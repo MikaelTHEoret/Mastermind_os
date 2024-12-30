@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --background: 240 85% 3%;
+    --foreground: 265 100% 95%;
+    --card: 240 80% 5%;
+    --card-foreground: 265 100% 95%;
+    --popover: 240 80% 5%;
+    --popover-foreground: 265 100% 95%;
+    --primary: 265 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 100% 50%;
+    --secondary-foreground: 240 80% 5%;
+    --muted: 240 40% 20%;
+    --muted-foreground: 265 60% 80%;
+    --accent: 265 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 265 40% 30%;
+    --input: 265 40% 30%;
+    --ring: 265 100% 60%;
+    --radius: 0;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}
+
+.window-content {
+  @apply bg-gray-900 text-gray-100;
+}
+
+.window-header {
+  @apply bg-gray-800 border-b border-purple-500/20;
+}
+
+.input-field {
+  @apply bg-gray-800 border-gray-700 text-gray-100 focus:border-purple-500 focus:ring-purple-500/20;
+}
+
+.button-primary {
+  @apply bg-purple-600 hover:bg-purple-700 text-white;
+}
+
+.button-secondary {
+  @apply bg-gray-700 hover:bg-gray-600 text-gray-100;
+}
+
+.circuit-bg {
+  background-color: hsl(240, 85%, 3%);
+  background-image: 
+    linear-gradient(0deg, rgba(147, 51, 234, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 51, 234, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: center center;
+  position: relative;
+}
+
+.circuit-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+  pointer-events: none;
+}
+
+/* Retro CRT effect */
+.crt::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 100;
+  animation: scan 2s linear infinite;
+  opacity: 0.3;
+}
+
+/* Neon text effect */
+.neon-text {
+  text-shadow: 
+    0 0 5px rgba(147, 51, 234, 1),
+    0 0 10px rgba(147, 51, 234, 0.8),
+    0 0 15px rgba(147, 51, 234, 0.6),
+    0 0 20px rgba(147, 51, 234, 0.4);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.neon-text-cyan {
+  text-shadow: 
+    0 0 5px rgba(0, 255, 255, 1),
+    0 0 10px rgba(0, 255, 255, 0.8),
+    0 0 15px rgba(0, 255, 255, 0.6),
+    0 0 20px rgba(0, 255, 255, 0.4);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.window-glow {
+  box-shadow: 
+    0 0 10px rgba(147, 51, 234, 0.3),
+    0 0 20px rgba(147, 51, 234, 0.2),
+    0 0 30px rgba(147, 51, 234, 0.1);
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes glow {
+  0% {
+    text-shadow: 0 0 5px rgba(147, 51, 234, 0.8), 0 0 10px rgba(147, 51, 234, 0.5);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(147, 51, 234, 1), 0 0 20px rgba(147, 51, 234, 0.8);
+  }
+}
+
+/* Toolbar styling */
+.toolbar {
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(147, 51, 234, 0.2);
+}
+
+/* Tab styling */
+.tabs-list {
+  @apply bg-gray-800 p-1 rounded-lg;
+}
+
+.tab-trigger {
+  @apply px-3 py-2 rounded-md text-sm font-medium transition-colors;
+  @apply text-gray-400 hover:text-white hover:bg-gray-700;
+  @apply data-[state=active]:bg-purple-600 data-[state=active]:text-white;
+}
+
+/* Window content areas */
+.window-panel {
+  @apply bg-gray-900 rounded-lg p-4 border border-gray-800;
+}
+
+/* Form elements */
+.form-input {
+  @apply bg-gray-800 border-gray-700 text-white rounded-md;
+  @apply focus:ring-purple-500 focus:border-purple-500;
+}
+
+.form-select {
+  @apply bg-gray-800 border-gray-700 text-white rounded-md;
+  @apply focus:ring-purple-500 focus:border-purple-500;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+  @apply hover:bg-gray-600;
+}
