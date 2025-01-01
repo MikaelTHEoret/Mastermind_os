@@ -695,8 +695,8 @@ try {
     });
 
     // Validate worker availability
-    const availableWorkers = workers.filter(workerId => {
-      const worker = this.getWorkerStatus(workerId);
+    const availableWorkers = workers.filter(() => {
+      const worker = this.getWorkerStatus();
       return worker && worker.status === 'active';
     });
 
@@ -707,7 +707,7 @@ try {
     // Deploy to each worker
     for (const workerId of availableWorkers) {
       try {
-        await this.deployScriptToWorker(workerId, script);
+        await this.deployScriptToWorker();
         
         this.logger.addLog({
           source: 'SirExecutor',
@@ -726,12 +726,12 @@ try {
     }
   }
 
-  private getWorkerStatus(workerId: string): { status: string } | undefined {
+  private getWorkerStatus(): { status: string } | undefined {
     // Implementation would check actual worker status
     return { status: 'active' };
   }
 
-  private async deployScriptToWorker(targetWorkerId: string, scriptContent: string): Promise<void> {
+  private async deployScriptToWorker(): Promise<void> {
     // Implementation would handle actual worker deployment
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate deployment
   }

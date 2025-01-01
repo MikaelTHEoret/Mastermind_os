@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { checkBrowserCompatibility } from './lib/utils/browserCheck';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -8,7 +9,35 @@ import Settings from './components/Settings';
 import { useNexusStore } from './stores/nexusStore';
 import { useWindowStore } from './stores/windowStore';
 
+function BrowserWarning({ missingFeatures }: { missingFeatures: string[] }) {
+  return (
+    <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-4 z-50">
+      <div className="container mx-auto">
+        <h2 className="text-lg font-bold mb-2">Browser Compatibility Warning</h2>
+        <p>Your browser is missing the following required features:</p>
+        <ul className="list-disc list-inside">
+          {missingFeatures.map(feature => (
+            <li key={feature}>{feature}</li>
+          ))}
+        </ul>
+        <p className="mt-2">
+          Please use a modern browser like Chrome, Firefox, Safari, or Edge to ensure all features work correctly.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const [browserCheck, setBrowserCheck] = useState<{
+    isCompatible: boolean;
+    missingFeatures: string[];
+  }>({ isCompatible: true, missingFeatures: [] });
+
+  useEffect(() => {
+    setBrowserCheck(checkBrowserCompatibility());
+  }, []);
+
   const { initialize } = useNexusStore();
   const { addWindow } = useWindowStore();
 
@@ -77,7 +106,11 @@ function App() {
   }
 
   return (
-    <Router>
+    <>
+      {!browserCheck.isCompatible && (
+        <BrowserWarning missingFeatures={browserCheck.missingFeatures} />
+      )}
+      <Router>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
@@ -87,6 +120,7 @@ function App() {
         </Route>
       </Routes>
     </Router>
+    </>
   );
 }
 

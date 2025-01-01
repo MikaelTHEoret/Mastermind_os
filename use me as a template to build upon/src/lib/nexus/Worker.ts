@@ -5,13 +5,11 @@ import { validatePath } from '../fs/permissions';
 export class WorkerAgent {
   public readonly id: string;
   public readonly type: string;
-  private readonly permissions: Set<string>;
   private logger = useLogStore.getState();
 
-  constructor(id: string, type: string, permissions: string[] = []) {
+  constructor(id: string, type: string) {
     this.id = id;
     this.type = type;
-    this.permissions = new Set(permissions);
   }
 
   async executeScript(script: string, context: any = {}): Promise<any> {
@@ -93,7 +91,7 @@ export class WorkerAgent {
         }
         // Implement safe file reading
       },
-      writeFile: async (path: string, fileContent: string) => {
+      writeFile: async (path: string) => {
         if (!this.validatePermissions({ fileAccess: { path, operation: 'write' }})) {
           throw new Error('Access denied');
         }

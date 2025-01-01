@@ -74,7 +74,6 @@ const RETRY_DELAY = 1000;
 class StorageManager {
   private static instance: StorageManager;
   private db: IDBPDatabase<AIAssistantDB> | null = null;
-  private logger = useLogStore.getState();
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private currentVersion = 1;
@@ -90,54 +89,80 @@ class StorageManager {
     return StorageManager.instance;
   }
 
+  private getLogger() {
+    return useLogStore.getState();
+  }
+
+  private generateId(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback implementation
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   private async initializeWithRetry(attempt = 1): Promise<void> {
     try {
       this.db = await openDB<AIAssistantDB>(DB_NAME, this.currentVersion, {
-      upgrade(db) {
-        // DataFlux store
-        const dataFluxStore = db.createObjectStore('dataFlux', {
-          keyPath: 'id',
-        });
-        dataFluxStore.createIndex('by-timestamp', 'timestamp');
+        upgrade(db) {
+          // DataFlux store
+          if (!db.objectStoreNames.contains('dataFlux')) {
+            const dataFluxStore = db.createObjectStore('dataFlux', {
+              keyPath: 'id',
+            });
+            dataFluxStore.createIndex('by-timestamp', 'timestamp');
+          }
 
-        // Knowledge store
-        const knowledgeStore = db.createObjectStore('knowledge', {
-          keyPath: 'id',
-        });
-        knowledgeStore.createIndex('by-topic', 'topic');
+          // Knowledge store
+          if (!db.objectStoreNames.contains('knowledge')) {
+            const knowledgeStore = db.createObjectStore('knowledge', {
+              keyPath: 'id',
+            });
+            knowledgeStore.createIndex('by-topic', 'topic');
+          }
 
-        // Chat Messages store
-        const chatMessagesStore = db.createObjectStore('chatMessages', {
-          keyPath: 'id',
-        });
-        chatMessagesStore.createIndex('by-role', 'role');
-        chatMessagesStore.createIndex('by-timestamp', 'timestamp');
-        chatMessagesStore.createIndex('by-tokens', 'tokens');
+          // Chat Messages store
+          if (!db.objectStoreNames.contains('chatMessages')) {
+            const chatMessagesStore = db.createObjectStore('chatMessages', {
+              keyPath: 'id',
+            });
+            chatMessagesStore.createIndex('by-role', 'role');
+            chatMessagesStore.createIndex('by-timestamp', 'timestamp');
+            chatMessagesStore.createIndex('by-tokens', 'tokens');
+          }
 
-        // Chat Classifications store
-        const chatClassificationsStore = db.createObjectStore('chatClassifications', {
-          keyPath: 'id',
-        });
-        chatClassificationsStore.createIndex('by-topic', 'topic');
-        chatClassificationsStore.createIndex('by-timestamp', 'timestamp');
+          // Chat Classifications store
+          if (!db.objectStoreNames.contains('chatClassifications')) {
+            const chatClassificationsStore = db.createObjectStore('chatClassifications', {
+              keyPath: 'id',
+            });
+            chatClassificationsStore.createIndex('by-topic', 'topic');
+            chatClassificationsStore.createIndex('by-timestamp', 'timestamp');
+          }
 
-        // Metrics store
-        const metricsStore = db.createObjectStore('metrics', {
-          keyPath: 'id',
-        });
-        metricsStore.createIndex('by-type', 'type');
-      },
-    });
+          // Metrics store
+          if (!db.objectStoreNames.contains('metrics')) {
+            const metricsStore = db.createObjectStore('metrics', {
+              keyPath: 'id',
+            });
+            metricsStore.createIndex('by-type', 'type');
+          }
+        },
+      });
 
       this.initialized = true;
-      this.logger.addLog({
+      this.getLogger().addLog({
         source: 'StorageManager',
         type: 'info',
         message: 'Storage system initialized successfully'
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.addLog({
+      this.getLogger().addLog({
         source: 'StorageManager',
         type: 'error',
         message: `Failed to initialize storage (attempt ${attempt}): ${message}`
@@ -174,7 +199,7 @@ class StorageManager {
       await this.db.close();
       this.db = null;
       this.initialized = false;
-      this.logger.addLog({
+      this.getLogger().addLog({
         source: 'StorageManager',
         type: 'info',
         message: 'Storage system closed successfully'
@@ -193,7 +218,7 @@ class StorageManager {
     this.ensureInitialized();
     
     const entry = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       type: data.type,
       content: data,
       timestamp: Date.now(),
@@ -214,7 +239,7 @@ class StorageManager {
     this.ensureInitialized();
     
     const entry = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       ...message,
       timestamp: Date.now(),
       metadata: message.metadata || {},
@@ -237,7 +262,7 @@ class StorageManager {
     this.ensureInitialized();
     
     const entry = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       topic,
       messageIds,
       analysis,
@@ -261,7 +286,7 @@ class StorageManager {
     this.ensureInitialized();
     
     const entry = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       topic,
       content,
       timestamp: Date.now(),
@@ -277,7 +302,7 @@ class StorageManager {
     this.ensureInitialized();
     
     const entry = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       type,
       value,
       timestamp: Date.now(),

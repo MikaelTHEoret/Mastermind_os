@@ -3,11 +3,12 @@ import { useLogStore } from '../../../stores/logStore';
 import { AppError } from '../../utils/errors';
 
 // Mock indexedDB
-const mockAdd = jest.fn();
-const mockGetAll = jest.fn();
-const mockClose = jest.fn();
-const mockCreateIndex = jest.fn();
-const mockCreateObjectStore = jest.fn();
+const mockAdd = jest.fn().mockImplementation(() => Promise.resolve());
+const mockGetAll = jest.fn().mockImplementation(() => Promise.resolve([]));
+const mockClose = jest.fn().mockImplementation(() => Promise.resolve());
+const mockCreateObjectStore = jest.fn().mockReturnValue({
+  createIndex: jest.fn(),
+});
 
 const mockDB = {
   close: mockClose,
@@ -20,6 +21,9 @@ const mockDB = {
     }
   })),
   createObjectStore: mockCreateObjectStore,
+  objectStoreNames: {
+    contains: jest.fn().mockReturnValue(false),
+  },
 };
 
 const mockOpenDB = jest.fn();
@@ -27,22 +31,34 @@ jest.mock('idb', () => ({
   openDB: (...args: any[]) => mockOpenDB(...args),
 }));
 
-// Mock log store
+// Mock log store with proper initialization
 const mockLogStore = {
   addLog: jest.fn(),
 };
 
 jest.mock('../../../stores/logStore', () => ({
   useLogStore: {
-    getState: jest.fn(),
+    getState: () => mockLogStore,
   },
 }));
 
 describe('StorageManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (useLogStore.getState as jest.Mock).mockReturnValue(mockLogStore);
     mockOpenDB.mockResolvedValue(mockDB);
+    
+    // Reset the instance state
+    (storageManager as any).initialized = false;
+    (storageManager as any).db = null;
+    (storageManager as any).initPromise = null;
+  });
+
+  afterEach(async () => {
+    try {
+      await storageManager.close();
+    } catch (error) {
+      // Ignore close errors in cleanup
+    }
   });
 
   describe('Singleton Pattern', () => {
@@ -65,6 +81,7 @@ describe('StorageManager', () => {
     });
 
     it('should retry initialization on failure', async () => {
+      // First call fails, second succeeds
       mockOpenDB
         .mockRejectedValueOnce(new Error('DB Error'))
         .mockResolvedValueOnce(mockDB);
@@ -74,6 +91,7 @@ describe('StorageManager', () => {
       expect(mockOpenDB).toHaveBeenCalledTimes(2);
       expect(mockLogStore.addLog).toHaveBeenCalledWith(
         expect.objectContaining({
+          source: 'StorageManager',
           type: 'error',
           message: expect.stringContaining('Failed to initialize storage (attempt 1)')
         })
@@ -81,16 +99,19 @@ describe('StorageManager', () => {
     });
 
     it('should throw after max retries', async () => {
-      const error = new Error('DB Error');
-      mockOpenDB.mockRejectedValue(error);
+      // All calls fail
+      mockOpenDB.mockRejectedValue(new Error('DB Error'));
 
-      await expect(storageManager.initialize()).rejects.toThrow(AppError);
-      expect(mockOpenDB).toHaveBeenCalledTimes(3); // MAX_RETRIES
+      await expect(storageManager.initialize()).rejects.toThrow(
+        'Failed to initialize storage system after 3 attempts'
+      );
+      expect(mockOpenDB).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('Database Operations', () => {
     beforeEach(async () => {
+      mockOpenDB.mockResolvedValue(mockDB);
       await storageManager.initialize();
     });
 
@@ -105,14 +126,24 @@ describe('StorageManager', () => {
       expect(mockAdd).toHaveBeenCalledWith('chatMessages', expect.objectContaining({
         role: message.role,
         content: message.content,
-        tokens: message.tokens
+        tokens: message.tokens,
+        id: expect.any(String),
+        timestamp: expect.any(Number),
+        metadata: expect.any(Object)
       }));
-      expect(result).toMatchObject(message);
+      expect(result).toMatchObject({
+        ...message,
+        id: expect.any(String),
+        timestamp: expect.any(Number),
+        metadata: expect.any(Object)
+      });
     });
 
     it('should retrieve chat messages by role', async () => {
-      const messages = [{ id: '1', role: 'user' }];
-      mockGetAll.mockResolvedValue(messages);
+      const messages = [
+        { id: 'test-uuid', role: 'user', content: 'test', tokens: 5 }
+      ];
+      mockGetAll.mockResolvedValueOnce(messages);
 
       const result = await storageManager.getChatMessagesByRole('user');
       expect(result).toEqual(messages);
@@ -120,8 +151,12 @@ describe('StorageManager', () => {
   });
 
   describe('Cleanup', () => {
-    it('should close database connection', async () => {
+    beforeEach(async () => {
+      mockOpenDB.mockResolvedValue(mockDB);
       await storageManager.initialize();
+    });
+
+    it('should close database connection', async () => {
       await storageManager.close();
 
       expect(mockClose).toHaveBeenCalled();
@@ -130,6 +165,12 @@ describe('StorageManager', () => {
         type: 'info',
         message: 'Storage system closed successfully'
       });
+    });
+
+    it('should handle close when not initialized', async () => {
+      (storageManager as any).initialized = false;
+      await storageManager.close();
+      expect(mockClose).not.toHaveBeenCalled();
     });
   });
 });

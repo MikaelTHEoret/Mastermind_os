@@ -6,6 +6,7 @@ interface LogEntry {
   source: string;
   type: 'info' | 'warning' | 'error';
   message: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface LogStore {

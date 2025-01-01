@@ -57,21 +57,20 @@ export class MemoryManager {
         memoryConfig: this.config
       });
     } catch (error) {
-      // If OpenAI fails, try with Ollama as primary provider
+      // Log the error but continue initialization
       this.logger.addLog({
         source: 'MemoryManager',
         type: 'warning',
-        message: `Failed to initialize primary AI provider: ${error}. Falling back to Ollama.`
+        message: `Failed to initialize AI provider: ${error}. System will continue with limited functionality.`
       });
-
-      this.aiProvider = await createAIProvider({
-        ...appConfig.ai,
-        provider: 'ollama',
-        model: 'llama2'
-      }, { 
-        enableMemory: true,
-        memoryConfig: this.config
-      });
+      
+      // Create a mock AI provider that returns empty responses
+      this.aiProvider = {
+        chat: async () => ({ role: 'assistant', content: 'AI provider not available' }),
+        generateEmbedding: async () => new Array(384).fill(0),
+        initialize: async () => {},
+        cleanup: async () => {}
+      };
     }
   }
 
@@ -521,7 +520,7 @@ export class MemoryManager {
       }
 
       // Merge duplicates considering importance
-      for (const [id, similar] of duplicates) {
+      for (const [, similar] of duplicates) {
         if (similar.length > 1) {
           const sorted = await Promise.all(
             similar.map(async mem => ({

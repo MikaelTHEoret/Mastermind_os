@@ -2,15 +2,9 @@ import type { NexusCore, NexusAgent, ResourceMetrics, APIMetrics } from './types
 import { JohnnyGoGetter } from './JohnnyGoGetter';
 import { SirExecutor } from './SirExecutor';
 import { useLogStore } from '../../stores/logStore';
-import { useConfigStore as useProductionConfigStore } from '../../stores/configStore';
-import { useConfigStore as useTestConfigStore } from '../../stores/testConfigStore';
 import { storageManager } from '../storage/db';
 import { memoryManager } from '../memory/MemoryManager';
 import { AppError } from '../utils/errors';
-
-const useConfigStore = process.env.NODE_ENV === 'test' 
-  ? useTestConfigStore
-  : useProductionConfigStore;
 
 class CentralNexusSystem {
   private core: NexusCore;
@@ -108,7 +102,7 @@ class CentralNexusSystem {
 
   private setupAgentHealthChecks() {
     this.agentHealthCheckInterval = setInterval(() => {
-      this.agents.forEach((agent, id) => {
+      this.agents.forEach((_agent, id) => {
         this.checkAgentHealth(id);
       });
     }, 10000);
@@ -319,21 +313,6 @@ class CentralNexusSystem {
         type: 'info',
         message: `Starting system initialization (Attempt ${this.initializationAttempts}/${this.MAX_INIT_ATTEMPTS})`
       });
-
-      try {
-        await Promise.all([
-          storageManager.initialize(),
-          memoryManager.initialize()
-        ]);
-        this.logger.addLog({
-          source: 'CentralNexus',
-          type: 'info',
-          message: 'Storage and memory systems initialized successfully'
-        });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new AppError(`System initialization failed: ${message}`, 'CentralNexus', error);
-      }
 
       try {
         await this.registerCoreAgents();

@@ -379,7 +379,9 @@ export class JohnnyGoGetterAgent implements NexusAgent {
         });
       }
 
-      const taskId = crypto.randomUUID();
+      const taskId = typeof crypto !== 'undefined' && 'randomUUID' in crypto 
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
       const startTime = new Date().toISOString();
       
       // Add task to history
@@ -486,7 +488,9 @@ export class JohnnyGoGetterAgent implements NexusAgent {
   }
 
   protected async executeSecureTask(task: string): Promise<string> {
-    const taskId = crypto.randomUUID();
+    const taskId = typeof crypto !== 'undefined' && 'randomUUID' in crypto 
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
     
     if (this.executionLocks.has(taskId)) {
       throw new AppError('Task is already being executed', 'JohnnyGoGetter');

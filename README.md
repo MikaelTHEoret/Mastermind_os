@@ -62,7 +62,12 @@ Mastermind_os is a sophisticated TypeScript/React application that provides a mo
 ### Prerequisites
 - Node.js 16+
 - TypeScript 4.5+
-- Modern web browser with IndexedDB support
+- Modern web browser with:
+  - IndexedDB support (Chrome 24+, Firefox 16+, Safari 10+, Edge 12+)
+  - ES2020 features support
+  - WebWorker support for distributed computing features
+  - Local storage enabled for configuration persistence
+  - Minimum recommended screen resolution: 1280x720
 
 ### Installation Steps
 

@@ -1,16 +1,5 @@
 import { create } from 'zustand';
-import { persist, PersistOptions } from 'zustand/middleware';
-
-// Vite env type declarations
-interface ImportMetaEnv {
-  VITE_OPENAI_API_KEY: string;
-  VITE_AI_FALLBACK_PROVIDER: string;
-  VITE_AI_FALLBACK_MODEL: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+import { persist } from 'zustand/middleware';
 
 interface AIConfig {
   provider: 'openai' | 'anthropic' | 'ollama';
@@ -103,31 +92,44 @@ interface ConfigStore {
   updateConfig: (updates: Partial<Config>) => void;
 }
 
+interface EnvVars {
+  provider: 'openai' | 'anthropic' | 'ollama';
+  model: string;
+  apiKey: string;
+  fallbackProvider: 'openai' | 'anthropic' | 'ollama';
+  fallbackModel: string;
+}
+
+import { getEnvVar } from '../lib/utils/env';
+
 // Get environment variables
-const getEnvVars = () => {
-  if (process.env.NODE_ENV === 'test') {
-    return {
-      apiKey: 'test-key',
-      fallbackProvider: 'ollama',
-      fallbackModel: 'llama2'
-    };
-  }
+const getEnvVars = (): EnvVars => {
+  const rawProvider = getEnvVar('VITE_AI_PROVIDER', 'openai');
+  const model = getEnvVar('VITE_AI_MODEL', 'gpt-4-turbo-preview');
+  const apiKey = getEnvVar('VITE_OPENAI_API_KEY');
+  const rawFallbackProvider = getEnvVar('VITE_AI_FALLBACK_PROVIDER', 'ollama');
+  const fallbackModel = getEnvVar('VITE_AI_FALLBACK_MODEL', 'llama2');
   
-  // In Vite, environment variables are exposed through import.meta.env
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  const fallbackProvider = import.meta.env.VITE_AI_FALLBACK_PROVIDER;
-  const fallbackModel = import.meta.env.VITE_AI_FALLBACK_MODEL;
+  // Validate provider values
+  const validProviders = ['openai', 'anthropic', 'ollama'] as const;
+  const provider = validProviders.includes(rawProvider as any) ? rawProvider as 'openai' | 'anthropic' | 'ollama' : 'openai';
+  const fallbackProvider = validProviders.includes(rawFallbackProvider as any) ? rawFallbackProvider as 'openai' | 'anthropic' | 'ollama' : 'ollama';
   
-  if (!apiKey) {
-    console.error('OpenAI API key not found in environment variables');
+  if (provider !== 'ollama' && !apiKey) {
+    console.error('API key not found in environment variables');
   }
   
   return {
-    apiKey: apiKey || '',
-    fallbackProvider: fallbackProvider || 'ollama',
-    fallbackModel: fallbackModel || 'llama2'
+    provider,
+    model,
+    apiKey,
+    fallbackProvider,
+    fallbackModel
   };
 };
+
+// Get environment configuration once
+const envConfig = getEnvVars();
 
 const defaultConfig: Config = {
   memory: {
@@ -188,13 +190,13 @@ const defaultConfig: Config = {
       backupInterval: 86400 // 24 hours
   },
   ai: {
-    provider: 'openai',
-    apiKey: getEnvVars().apiKey,
-    model: 'gpt-4-turbo-preview',
+    provider: envConfig.provider,
+    apiKey: envConfig.apiKey,
+    model: envConfig.model,
     temperature: 0.7,
     maxTokens: 4000,
-    fallbackProvider: getEnvVars().fallbackProvider as 'openai' | 'anthropic' | 'ollama',
-    fallbackModel: getEnvVars().fallbackModel,
+    fallbackProvider: envConfig.fallbackProvider,
+    fallbackModel: envConfig.fallbackModel,
   },
 };
 
@@ -220,16 +222,3 @@ export const useConfigStore = create<ConfigStore>()(
     }
   )
 );
-
-// Declare env.d.ts augmentation for Vite
-declare module 'vite/client' {
-  interface ImportMetaEnv {
-    readonly VITE_OPENAI_API_KEY: string;
-    readonly VITE_AI_FALLBACK_PROVIDER: string;
-    readonly VITE_AI_FALLBACK_MODEL: string;
-  }
-
-  interface ImportMeta {
-    readonly env: ImportMetaEnv;
-  }
-}

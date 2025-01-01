@@ -2,8 +2,61 @@ import { OpenAIProvider } from './providers/openai';
 import { AnthropicProvider } from './providers/anthropic';
 import { OllamaProvider } from './providers/ollama';
 import { MemoryEnabledProvider } from './MemoryEnabledProvider';
-import type { AIConfig, AIProvider, AIProviderType, CreateAIProviderOptions } from './types';
+import type { AIConfig, AIProvider, AIProviderType, CreateAIProviderOptions, Message } from './types';
 import { AppError } from '../utils/errors';
+
+// Request queue for each provider type
+const requestQueues = new Map<AIProviderType, Promise<any>>();
+
+// Queue a request for a specific provider
+export async function queueRequest<T>(
+  provider: AIProviderType,
+  operation: () => Promise<T>
+): Promise<T> {
+  // Get or create the provider's queue
+  const currentQueue = requestQueues.get(provider) || Promise.resolve();
+  
+  // Create new promise that waits for current queue before executing
+  const newQueue = currentQueue.then(async () => {
+    try {
+      return await operation();
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  // Update the queue
+  requestQueues.set(provider, newQueue);
+  
+  // Return the queued operation result
+  return newQueue;
+}
+
+// Wrap provider methods with queue
+function wrapProviderWithQueue(provider: AIProvider, type: AIProviderType): AIProvider {
+  return {
+    ...provider,
+    chat: (messages: Message[]) => 
+      queueRequest(type, () => provider.chat(messages)),
+    generateEmbedding: provider.generateEmbedding 
+      ? (text: string) => queueRequest(type, () => {
+          if (provider.generateEmbedding) {
+            return provider.generateEmbedding(text);
+          }
+          throw new AppError('Embedding generation not supported', 'AIProvider');
+        })
+      : undefined,
+    initialize: () => queueRequest(type, () => provider.initialize()),
+    cleanup: provider.cleanup
+      ? () => queueRequest(type, () => {
+          if (provider.cleanup) {
+            return provider.cleanup();
+          }
+          return Promise.resolve();
+        })
+      : undefined
+  };
+}
 
 export async function createAIProvider(
   config: AIConfig,
@@ -53,16 +106,19 @@ export async function createAIProvider(
     }
 
     // Initialize the provider
-    await provider.initialize?.();
+    await provider.initialize();
+
+    // Wrap provider with request queue
+    const queuedProvider = wrapProviderWithQueue(provider, config.provider);
 
     // Wrap with memory if enabled
     if (options.enableMemory) {
-      const memoryProvider = new MemoryEnabledProvider(provider);
-      await memoryProvider.initialize?.();
+      const memoryProvider = new MemoryEnabledProvider(queuedProvider);
+      await memoryProvider.initialize();
       return memoryProvider;
     }
 
-    return provider;
+    return queuedProvider;
   } catch (error: unknown) {
     if (error instanceof AppError) {
       throw error;

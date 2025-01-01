@@ -16,7 +16,7 @@ export interface RateLimitConfig {
 }
 
 export interface AIProvider {
-  initialize?(): Promise<void>;
+  initialize(): Promise<void>;
   chat(messages: Message[]): Promise<Message>;
   generateEmbedding?(text: string): Promise<number[]>;
   cleanup?(): Promise<void>;
@@ -53,6 +53,30 @@ export interface MemoryConfig {
 export interface CreateAIProviderOptions {
   enableMemory?: boolean;
   memoryConfig?: MemoryConfig;
+}
+
+export interface PerformanceMetrics {
+  duration: number;
+  tokensProcessed?: number;
+  memoryUsage?: {
+    heapUsed: number;
+    heapTotal: number;
+    external: number;
+  };
+}
+
+export interface CompletionMetrics {
+  startTime: number;
+  endTime: number;
+  performance: PerformanceMetrics;
+}
+
+export interface LogMessage {
+  source: string;
+  type: 'info' | 'warning' | 'error';
+  message: string;
+  timestamp?: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AppConfig {

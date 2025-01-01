@@ -1,7 +1,6 @@
 import { memoryManager } from '../MemoryManager';
 import { IndexedDBStore } from '../IndexedDBStore';
 import { useLogStore } from '../../../stores/logStore';
-import { useConfigStore } from '../../../stores/testConfigStore';
 import { AppError } from '../../utils/errors';
 
 // Mock dependencies

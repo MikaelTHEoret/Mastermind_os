@@ -1,6 +1,5 @@
 import { memoryManager } from '../MemoryManager';
 import { useLogStore } from '../../../stores/logStore';
-import { useConfigStore } from '../../../stores/testConfigStore';
 
 // Mock dependencies
 jest.mock('../../../stores/logStore');
@@ -24,6 +23,30 @@ describe('Memory System Performance Tests', () => {
     jest.clearAllMocks();
     (useLogStore.getState as jest.Mock).mockReturnValue(mockLogStore);
     await memoryManager.initialize();
+  });
+
+  afterEach(async () => {
+    await memoryManager.close();
+  });
+
+  describe('Lifecycle Performance', () => {
+    it('should initialize quickly', async () => {
+      await memoryManager.close(); // Close from beforeEach
+      const startTime = Date.now();
+      await memoryManager.initialize();
+      const initTime = Date.now() - startTime;
+      
+      expect(initTime).toBeLessThan(500); // Should initialize within 500ms
+    });
+
+    it('should cleanup quickly', async () => {
+      const startTime = Date.now();
+      await memoryManager.close();
+      const cleanupTime = Date.now() - startTime;
+      
+      expect(cleanupTime).toBeLessThan(200); // Should cleanup within 200ms
+      await memoryManager.initialize(); // Re-initialize for other tests
+    });
   });
 
   describe('Memory Operation Latency', () => {
@@ -208,6 +231,31 @@ describe('Memory System Performance Tests', () => {
       expect(maxLatency).toBeLessThan(200); // Max latency under 200ms
       expect(p95Latency).toBeLessThan(150); // 95th percentile under 150ms
       expect(operationCount).toBeGreaterThan(100); // Should complete many operations
+
+      // Verify cleanup performance after stress
+      const cleanupStart = Date.now();
+      await memoryManager.close();
+      const cleanupTime = Date.now() - cleanupStart;
+      expect(cleanupTime).toBeLessThan(500); // Cleanup after stress within 500ms
+      
+      await memoryManager.initialize(); // Re-initialize for other tests
+    });
+
+    it('should maintain performance during rapid init/cleanup cycles', async () => {
+      const cycles = 5;
+      const results: number[] = [];
+
+      for (let i = 0; i < cycles; i++) {
+        const cycleStart = Date.now();
+        
+        await memoryManager.close();
+        await memoryManager.initialize();
+        
+        results.push(Date.now() - cycleStart);
+      }
+
+      const avgCycleTime = results.reduce((a, b) => a + b, 0) / results.length;
+      expect(avgCycleTime).toBeLessThan(1000); // Average cycle under 1 second
     });
   });
 });

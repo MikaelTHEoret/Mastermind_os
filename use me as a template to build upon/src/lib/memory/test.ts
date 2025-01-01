@@ -1,14 +1,11 @@
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { resolve } from 'path';
 import { config } from 'dotenv';
 import { createAIProvider } from '../ai/factory';
 import { memoryManager } from './MemoryManager';
 import type { Message } from '../ai/types';
 
 // Load environment variables from .env file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-config({ path: resolve(__dirname, '../../../.env') });
+config({ path: resolve(process.cwd(), '.env') });
 
 if (!process.env.OPENAI_API_KEY) {
   console.error('Error: OPENAI_API_KEY environment variable is required');
@@ -106,7 +103,7 @@ async function testMemorySystem() {
 }
 
 // Check if file is being run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   // Initialize memory manager first
   memoryManager.initialize()
     .then(() => testMemorySystem())
