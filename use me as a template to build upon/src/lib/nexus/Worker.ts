@@ -1,14 +1,12 @@
 import type { NexusAgent } from './types';
 import { useLogStore } from '../../stores/logStore';
-import { useConfigStore } from '../../stores/configStore';
 import { validatePath } from '../fs/permissions';
 
 export class WorkerAgent {
-  private id: string;
-  private type: string;
-  private permissions: Set<string>;
+  public readonly id: string;
+  public readonly type: string;
+  private readonly permissions: Set<string>;
   private logger = useLogStore.getState();
-  private config = useConfigStore.getState().config;
 
   constructor(id: string, type: string, permissions: string[] = []) {
     this.id = id;
@@ -32,11 +30,12 @@ export class WorkerAgent {
       // Execute in isolated context
       const result = await this.runInSandbox(script, context);
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.addLog({
         source: `Worker-${this.id}`,
         type: 'error',
-        message: `Script execution failed: ${error.message}`
+        message: `Script execution failed: ${message}`
       });
       throw error;
     }
@@ -47,11 +46,18 @@ export class WorkerAgent {
       const { path, operation } = context.fileAccess;
       
       // Check file system permissions
-      if (operation === 'read' && !this.config.fileSystem.read) return false;
-      if (operation === 'write' && !this.config.fileSystem.write) return false;
+      const fsConfig = context.fileSystem || {
+        read: true,
+        write: false,
+        allowedPaths: [],
+        blockedPaths: []
+      };
+      
+      if (operation === 'read' && !fsConfig.read) return false;
+      if (operation === 'write' && !fsConfig.write) return false;
       
       // Validate path against allowed/blocked paths
-      return validatePath(path, this.config.fileSystem);
+      return validatePath(path, fsConfig);
     }
     
     return true;
@@ -87,7 +93,7 @@ export class WorkerAgent {
         }
         // Implement safe file reading
       },
-      writeFile: async (path: string, content: string) => {
+      writeFile: async (path: string, fileContent: string) => {
         if (!this.validatePermissions({ fileAccess: { path, operation: 'write' }})) {
           throw new Error('Access denied');
         }
@@ -131,6 +137,21 @@ export const FileWorker: NexusAgent = {
       "Access permissions confirmed."
     ],
     background: "A specialized worker unit dedicated to safe and efficient file system operations."
+  },
+  processingMetrics: {
+    localTasks: 0,
+    apiTasks: 0,
+    averageCostPerTask: 0,
+    successRate: 1.0,
+    lastHealthCheck: new Date().toISOString(),
+    responseTime: 0,
+    taskHistory: []
+  },
+  resourceAllocation: {
+    cpuQuota: 25,
+    memoryQuota: 256,
+    priorityLevel: 3,
+    currentLoad: 0
   }
 };
 
@@ -159,5 +180,20 @@ export const ScriptWorker: NexusAgent = {
       "Execution sequence complete."
     ],
     background: "A dedicated worker unit specialized in safe script execution within isolated environments."
+  },
+  processingMetrics: {
+    localTasks: 0,
+    apiTasks: 0,
+    averageCostPerTask: 0,
+    successRate: 1.0,
+    lastHealthCheck: new Date().toISOString(),
+    responseTime: 0,
+    taskHistory: []
+  },
+  resourceAllocation: {
+    cpuQuota: 35,
+    memoryQuota: 512,
+    priorityLevel: 2,
+    currentLoad: 0
   }
 };

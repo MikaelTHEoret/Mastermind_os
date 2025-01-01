@@ -15,6 +15,21 @@ export interface ResourceMetrics {
   memory: number;
   storage: number;
   network: number;
+  taskQueue: {
+    total: number;
+    highPriority: number;
+    waiting: number;
+    processing: number;
+    failed: number;
+    avgProcessingTime: number;
+  };
+  agentCoordination: {
+    activeAgents: number;
+    totalTasks: number;
+    taskDistribution: Record<string, number>; // agent type -> task count
+    avgResponseTime: number;
+    failureRate: number;
+  };
 }
 
 export interface APIMetrics {
@@ -34,10 +49,27 @@ export interface NexusAgent {
   clearance: number;
   specialization: string[];
   currentTask?: string;
-  processingMetrics?: {
+  processingMetrics: {
     localTasks: number;
     apiTasks: number;
     averageCostPerTask: number;
+    successRate: number;
+    lastHealthCheck: string;
+    responseTime: number;
+    taskHistory: Array<{
+      id: string;
+      type: string;
+      startTime: string;
+      endTime?: string;
+      status: 'completed' | 'failed' | 'in-progress';
+      error?: string;
+    }>;
+  };
+  resourceAllocation: {
+    cpuQuota: number;
+    memoryQuota: number;
+    priorityLevel: number;
+    currentLoad: number;
   };
 }
 

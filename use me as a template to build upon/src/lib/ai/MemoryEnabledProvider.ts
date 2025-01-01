@@ -1,4 +1,4 @@
-import { AIProvider, Message } from './types';
+import { AIProvider, Message, MessageRole } from './types';
 import { memoryManager } from '../memory/MemoryManager';
 import { useLogStore } from '../../stores/logStore';
 import { AppError } from '../utils/errors';
@@ -17,6 +17,25 @@ export class MemoryEnabledProvider implements AIProvider {
     if (this.baseProvider.initialize) {
       await this.baseProvider.initialize();
     }
+  }
+
+  private validateMessage(message: Message): void {
+    if (!['system', 'user', 'assistant'].includes(message.role)) {
+      throw new AppError(
+        `Invalid message role: ${message.role}`,
+        'MemoryEnabledProvider'
+      );
+    }
+    if (typeof message.content !== 'string') {
+      throw new AppError(
+        'Message content must be a string',
+        'MemoryEnabledProvider'
+      );
+    }
+  }
+
+  private validateMessages(messages: Message[]): void {
+    messages.forEach(this.validateMessage);
   }
 
   private async getRelevantContext(messages: Message[]): Promise<string> {
@@ -46,6 +65,9 @@ export class MemoryEnabledProvider implements AIProvider {
 
   async chat(messages: Message[]): Promise<Message> {
     try {
+      // Validate incoming messages
+      this.validateMessages(messages);
+
       // Add messages to conversation memory
       this.conversationMemory.push(...messages);
 
@@ -53,18 +75,21 @@ export class MemoryEnabledProvider implements AIProvider {
       const context = await this.getRelevantContext(this.conversationMemory);
 
       // If we have relevant context, add it to the messages
+      const contextMessage: Message = {
+        role: 'system' as MessageRole,
+        content: `Previous context:\n${context}\n\nUse this context to inform your responses when relevant.`,
+        timestamp: Date.now()
+      };
+
       const messagesWithContext = context
-        ? [
-            {
-              role: 'system',
-              content: `Previous context:\n${context}\n\nUse this context to inform your responses when relevant.`
-            },
-            ...messages
-          ]
+        ? [contextMessage, ...messages]
         : messages;
 
       // Get response from base provider
       const response = await this.baseProvider.chat(messagesWithContext);
+
+      // Validate response
+      this.validateMessage(response);
 
       // Store the conversation in memory periodically
       if (this.conversationMemory.length >= 10) {
@@ -85,6 +110,9 @@ export class MemoryEnabledProvider implements AIProvider {
 
   private async storeConversationMemory(): Promise<void> {
     try {
+      // Validate before storing
+      this.validateMessages(this.conversationMemory);
+      
       await memoryManager.storeConversationMemory(this.conversationMemory);
       // Clear conversation memory after storing
       this.conversationMemory = [];

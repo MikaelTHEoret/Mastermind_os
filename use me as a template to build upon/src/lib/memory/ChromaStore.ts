@@ -4,36 +4,101 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { IMemoryStore, MemoryEntry, MemoryQuery } from './types';
 import { useConfigStore } from '../../stores/configStore';
 import { useLogStore } from '../../stores/logStore';
-import { AppError, getErrorMessage } from '../utils/errors';
+import { AppError } from '../utils/errors';
+import { generateLocalEmbedding } from '../ai/mock/localEmbeddings';
 
 export class ChromaStore implements IMemoryStore {
   private client: ChromaClient;
-  private collection!: Collection; // Will be initialized in initialize()
-  private embeddings: OpenAIEmbeddings;
+  private collection!: Collection;
+  private embeddings?: OpenAIEmbeddings;
   private embeddingFunction: IEmbeddingFunction;
   private logger = useLogStore.getState();
+  private initialized = false;
 
   constructor() {
-    this.client = new ChromaClient();
     const config = useConfigStore.getState().config;
-    if (!config.ai.apiKey) {
-      throw new AppError('API key is required for memory embeddings', 'ChromaStore');
+    const memoryConfig = config.memory;
+    
+    if (!memoryConfig) {
+      throw new AppError('Memory configuration is required', 'ChromaStore');
     }
     
-    this.embeddings = new OpenAIEmbeddings({
-      openAIApiKey: config.ai.apiKey,
-      modelName: 'text-embedding-ada-002',
-      batchSize: 512,
-      stripNewLines: true,
+    // Initialize ChromaDB client with configuration
+    const chromaConfig = memoryConfig.chroma || {
+      host: 'localhost',
+      port: 8000,
+      apiImpl: 'rest'
+    };
+
+    this.client = new ChromaClient({
+      path: `http://${chromaConfig.host}:${chromaConfig.port}`,
+      fetchOptions: chromaConfig.apiKey ? {
+        headers: {
+          'Authorization': `Bearer ${chromaConfig.apiKey}`
+        }
+      } : undefined
     });
 
+    // Initialize embedding function based on configuration
+    const embeddingConfig = memoryConfig.embedding || {
+      provider: 'openai',
+      model: 'text-embedding-ada-002',
+      batchSize: 512
+    };
+    
+    const useLocalEmbeddings = embeddingConfig.provider === 'local' || !config.ai.apiKey;
+    
+    if (!useLocalEmbeddings && config.ai.apiKey) {
+      try {
+        this.embeddings = new OpenAIEmbeddings({
+          openAIApiKey: config.ai.apiKey,
+          modelName: embeddingConfig.model,
+          batchSize: embeddingConfig.batchSize,
+          stripNewLines: true,
+        });
+      } catch (error) {
+        this.logger.addLog({
+          source: 'ChromaStore',
+          type: 'warning',
+          message: `Failed to initialize OpenAI embeddings: ${error}. Falling back to local embeddings.`
+        });
+      }
+    }
+
+    // Create embedding function with fallback
     this.embeddingFunction = {
       generate: async (texts: string[]): Promise<number[][]> => {
-        return await Promise.all(
-          texts.map(text => this.embeddings.embedQuery(text))
-        );
+        try {
+          if (this.embeddings) {
+            return await Promise.all(texts.map(text => this.embeddings!.embedQuery(text)));
+          }
+          return await Promise.all(texts.map(generateLocalEmbedding));
+        } catch (error) {
+          this.logger.addLog({
+            source: 'ChromaStore',
+            type: 'warning',
+            message: `OpenAI embeddings failed, falling back to local: ${error}`
+          });
+          return await Promise.all(texts.map(generateLocalEmbedding));
+        }
       }
     };
+  }
+
+  async close(): Promise<void> {
+    if (this.initialized) {
+      try {
+        await this.client.reset();
+        this.initialized = false;
+        this.logger.addLog({
+          source: 'ChromaStore',
+          type: 'info',
+          message: 'ChromaDB connection closed successfully'
+        });
+      } catch (error) {
+        throw new AppError('Failed to close ChromaDB connection', 'ChromaStore', error);
+      }
+    }
   }
 
   async initialize() {
@@ -65,7 +130,9 @@ export class ChromaStore implements IMemoryStore {
     const timestamp = Date.now();
     
     try {
-      const embedding = await this.embeddings.embedQuery(entry.content);
+      const embedding = this.embeddings 
+        ? await this.embeddings.embedQuery(entry.content)
+        : await generateLocalEmbedding(entry.content);
       
       await (this.collection as any).add({
         ids: [id],
@@ -170,7 +237,9 @@ export class ChromaStore implements IMemoryStore {
 
       let updatedEmbedding = existing.embeddings?.[0];
       if (entry.content) {
-        updatedEmbedding = await this.embeddings.embedQuery(entry.content);
+        updatedEmbedding = this.embeddings 
+          ? await this.embeddings.embedQuery(entry.content)
+          : await generateLocalEmbedding(entry.content);
       }
 
       await (this.collection as any).update({

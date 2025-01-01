@@ -1,12 +1,25 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, PersistOptions } from 'zustand/middleware';
+
+// Vite env type declarations
+interface ImportMetaEnv {
+  VITE_OPENAI_API_KEY: string;
+  VITE_AI_FALLBACK_PROVIDER: string;
+  VITE_AI_FALLBACK_MODEL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
 interface AIConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'ollama';
   apiKey: string;
   model: string;
   temperature?: number;
   maxTokens?: number;
+  fallbackProvider?: 'openai' | 'anthropic' | 'ollama';
+  fallbackModel?: string;
 }
 
 interface SystemConfig {
@@ -44,12 +57,45 @@ interface DatabaseConfig {
   ssl: boolean;
 }
 
+interface ChromaConfig {
+  host: string;
+  port: number;
+  apiImpl: 'rest' | 'http';
+  apiKey?: string;
+}
+
+interface EmbeddingConfig {
+  provider: 'openai' | 'local';
+  model?: string;
+  batchSize?: number;
+}
+
+interface MemoryConfig {
+  summarizationThreshold: number;
+  relevanceThreshold: number;
+  maxContextMemories: number;
+  cleanupAge: number;
+  deduplicationThreshold: number;
+  backupInterval?: number;
+  compressionThreshold?: number;
+  version?: string;
+  maxMemorySize?: number;
+  importanceThresholds?: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+  chroma?: ChromaConfig;
+  embedding?: EmbeddingConfig;
+}
+
 interface Config {
   system: SystemConfig;
   network: NetworkConfig;
   security: SecurityConfig;
   database: DatabaseConfig;
   ai: AIConfig;
+  memory?: MemoryConfig;
 }
 
 interface ConfigStore {
@@ -57,14 +103,59 @@ interface ConfigStore {
   updateConfig: (updates: Partial<Config>) => void;
 }
 
-// Get API key from environment
-const getApiKey = () => {
-  const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (openaiKey) return openaiKey;
-  return '';
+// Get environment variables
+const getEnvVars = () => {
+  if (process.env.NODE_ENV === 'test') {
+    return {
+      apiKey: 'test-key',
+      fallbackProvider: 'ollama',
+      fallbackModel: 'llama2'
+    };
+  }
+  
+  // In Vite, environment variables are exposed through import.meta.env
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const fallbackProvider = import.meta.env.VITE_AI_FALLBACK_PROVIDER;
+  const fallbackModel = import.meta.env.VITE_AI_FALLBACK_MODEL;
+  
+  if (!apiKey) {
+    console.error('OpenAI API key not found in environment variables');
+  }
+  
+  return {
+    apiKey: apiKey || '',
+    fallbackProvider: fallbackProvider || 'ollama',
+    fallbackModel: fallbackModel || 'llama2'
+  };
 };
 
 const defaultConfig: Config = {
+  memory: {
+    summarizationThreshold: 10,
+    relevanceThreshold: 0.7,
+    maxContextMemories: 5,
+    cleanupAge: 30 * 24 * 60 * 60 * 1000,
+    deduplicationThreshold: 0.95,
+    backupInterval: 24 * 60 * 60 * 1000,
+    compressionThreshold: 7 * 24 * 60 * 60 * 1000,
+    version: '1.0.0',
+    maxMemorySize: 50 * 1024 * 1024,
+    importanceThresholds: {
+      high: 0.8,
+      medium: 0.5,
+      low: 0.3
+    },
+    chroma: {
+      host: 'localhost',
+      port: 8000,
+      apiImpl: 'rest'
+    },
+    embedding: {
+      provider: 'openai',
+      model: 'text-embedding-ada-002',
+      batchSize: 512
+    }
+  },
   system: {
     environment: 'development',
     debug: true,
@@ -98,19 +189,26 @@ const defaultConfig: Config = {
   },
   ai: {
     provider: 'openai',
-    apiKey: getApiKey(),
+    apiKey: getEnvVars().apiKey,
     model: 'gpt-4-turbo-preview',
     temperature: 0.7,
     maxTokens: 4000,
+    fallbackProvider: getEnvVars().fallbackProvider as 'openai' | 'anthropic' | 'ollama',
+    fallbackModel: getEnvVars().fallbackModel,
   },
 };
 
+type SetState = (
+  partial: ConfigStore | Partial<ConfigStore> | ((state: ConfigStore) => ConfigStore | Partial<ConfigStore>),
+  replace?: boolean | undefined
+) => void;
+
 export const useConfigStore = create<ConfigStore>()(
   persist(
-    (set) => ({
+    (set: SetState) => ({
       config: defaultConfig,
-      updateConfig: (updates) =>
-        set((state) => ({
+      updateConfig: (updates: Partial<Config>) =>
+        set((state: ConfigStore) => ({
           config: {
             ...state.config,
             ...updates,
@@ -122,3 +220,16 @@ export const useConfigStore = create<ConfigStore>()(
     }
   )
 );
+
+// Declare env.d.ts augmentation for Vite
+declare module 'vite/client' {
+  interface ImportMetaEnv {
+    readonly VITE_OPENAI_API_KEY: string;
+    readonly VITE_AI_FALLBACK_PROVIDER: string;
+    readonly VITE_AI_FALLBACK_MODEL: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}

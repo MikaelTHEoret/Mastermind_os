@@ -144,8 +144,45 @@ Memory settings can be configured through the AI provider config:
 ```typescript
 {
   memoryConfig: {
+    // Memory System Settings
     summarizationThreshold: 10, // Messages before summarization
     relevanceThreshold: 0.7,    // Minimum similarity score
-    maxContextMemories: 5       // Max memories for context
+    maxContextMemories: 5,      // Max memories for context
+    cleanupAge: 30 * 24 * 60 * 60 * 1000, // 30 days retention
+    deduplicationThreshold: 0.95, // Similarity threshold for duplicates
+
+    // ChromaDB Configuration
+    chroma: {
+      host: 'localhost',
+      port: 8000,
+      apiImpl: 'rest',
+      apiKey: 'your-api-key' // Optional
+    },
+
+    // Embedding Configuration
+    embedding: {
+      provider: 'openai', // or 'local' for fallback
+      model: 'text-embedding-ada-002',
+      batchSize: 512
+    }
   }
 }
+```
+
+### Embedding System
+
+The system uses a two-tier embedding approach:
+
+1. **OpenAI Embeddings (Primary)**
+   - Uses text-embedding-ada-002 model
+   - High-quality semantic embeddings
+   - Requires API key
+
+2. **Local Embeddings (Fallback)**
+   - 768-dimensional vectors
+   - Deterministic algorithm
+   - No API dependency
+   - Automatically used when:
+     * OpenAI API key not provided
+     * OpenAI API calls fail
+     * Explicitly configured via `embedding.provider: 'local'`

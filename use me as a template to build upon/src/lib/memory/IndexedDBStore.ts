@@ -31,6 +31,29 @@ export class IndexedDBStore implements IMemoryStore {
 
   async initialize(): Promise<void> {
     try {
+      this.logger.addLog({
+        source: 'IndexedDBStore',
+        type: 'info',
+        message: 'Starting IndexedDB initialization...',
+      });
+
+      // Check if IndexedDB is available
+      if (!window.indexedDB) {
+        throw new Error('IndexedDB is not available in this environment');
+      }
+
+      // Check if OpenAI API key is configured
+      const config = useConfigStore.getState().config;
+      if (!config.ai.apiKey) {
+        throw new Error('OpenAI API key is not configured');
+      }
+
+      this.logger.addLog({
+        source: 'IndexedDBStore',
+        type: 'info',
+        message: 'Opening IndexedDB database...',
+      });
+
       this.db = await openDB<MemoryDB>('memory-store', 1, {
         upgrade(db) {
           const store = db.createObjectStore('memories', {
@@ -41,6 +64,10 @@ export class IndexedDBStore implements IMemoryStore {
         },
       });
 
+      // Verify database connection
+      const testTx = this.db.transaction('memories', 'readonly');
+      await testTx.done;
+
       this.logger.addLog({
         source: 'IndexedDBStore',
         type: 'info',
@@ -48,6 +75,7 @@ export class IndexedDBStore implements IMemoryStore {
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error('IndexedDBStore initialization error:', error);
       this.logger.addLog({
         source: 'IndexedDBStore',
         type: 'error',
@@ -204,6 +232,22 @@ export class IndexedDBStore implements IMemoryStore {
       await this.db.clear('memories');
     } catch (error: unknown) {
       throw new AppError('Failed to clear memory store', 'IndexedDBStore', error);
+    }
+  }
+
+  async close(): Promise<void> {
+    try {
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+        this.logger.addLog({
+          source: 'IndexedDBStore',
+          type: 'info',
+          message: 'Memory store closed successfully'
+        });
+      }
+    } catch (error: unknown) {
+      throw new AppError('Failed to close memory store', 'IndexedDBStore', error);
     }
   }
 }

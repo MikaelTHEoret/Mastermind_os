@@ -18,7 +18,7 @@ if (!process.env.OPENAI_API_KEY) {
 async function testMemorySystem() {
   console.log('Initializing memory-enabled AI provider...');
   
-  const provider = createAIProvider({
+  const provider = await createAIProvider({
     provider: 'openai',
     apiKey: process.env.OPENAI_API_KEY || '',
     model: 'gpt-3.5-turbo',
@@ -102,9 +102,7 @@ async function testMemorySystem() {
   console.log('Assistant:', response5.content);
 
   // Clean up
-  if (provider.cleanup) {
-    await provider.cleanup();
-  }
+  await provider.cleanup?.();
 }
 
 // Check if file is being run directly

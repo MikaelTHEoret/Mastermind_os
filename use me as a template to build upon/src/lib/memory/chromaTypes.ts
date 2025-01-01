@@ -1,3 +1,9 @@
+// ChromaDB client configuration types
+export interface ChromaClientParams {
+  path?: string;
+  fetchOptions?: RequestInit;
+}
+
 export interface IEmbeddingFunction {
   generate(texts: string[]): Promise<number[][]>;
 }

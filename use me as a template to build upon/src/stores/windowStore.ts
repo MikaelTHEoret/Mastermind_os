@@ -20,7 +20,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   activeWindow: null,
 
   addWindow: (window) => {
-    const { windows, getNextWindowPosition, hasWindowType } = get();
+    const { windows, getNextWindowPosition } = get();
     
     // Use provided ID or generate a unique one
     const position = getNextWindowPosition();

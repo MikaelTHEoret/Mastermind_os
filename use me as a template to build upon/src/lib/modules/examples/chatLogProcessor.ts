@@ -38,7 +38,6 @@ class ChatLogProcessor {
     this.resetStats();
     
     try {
-      const reader = new FileReader();
       let offset = 0;
       
       while (offset < file.size) {

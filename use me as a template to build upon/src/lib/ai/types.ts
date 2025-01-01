@@ -1,8 +1,18 @@
-export type AIProviderType = 'openai' | 'anthropic';
+export type AIProviderType = 'openai' | 'anthropic' | 'ollama';
+
+export type MessageRole = 'system' | 'user' | 'assistant';
 
 export interface Message {
-  role: string;
+  role: MessageRole;
   content: string;
+  timestamp?: number;
+}
+
+export interface RateLimitConfig {
+  maxRequestsPerMinute: number;
+  maxTokensPerMinute: number;
+  maxRetries: number;
+  retryDelayMs: number;
 }
 
 export interface AIProvider {
@@ -14,10 +24,15 @@ export interface AIProvider {
 
 export interface AIConfig {
   provider: AIProviderType;
-  apiKey: string;
+  apiKey?: string;  // Optional since Ollama doesn't need it
   model: string;
   temperature?: number;
   maxTokens?: number;
+  fallbackProvider?: AIProviderType;
+  fallbackApiKey?: string;  // Optional since Ollama doesn't need it
+  fallbackModel?: string;
+  rateLimit?: RateLimitConfig;
+  baseUrl?: string;  // Optional base URL for API endpoints
 }
 
 export interface FilePermissions {
@@ -27,7 +42,21 @@ export interface FilePermissions {
   blockedPaths: string[];
 }
 
+export interface MemoryConfig {
+  summarizationThreshold: number;
+  relevanceThreshold: number;
+  maxContextMemories: number;
+  cleanupAge: number;
+  deduplicationThreshold: number;
+}
+
+export interface CreateAIProviderOptions {
+  enableMemory?: boolean;
+  memoryConfig?: MemoryConfig;
+}
+
 export interface AppConfig {
   ai: AIConfig;
   fileSystem: FilePermissions;
+  memory?: MemoryConfig;
 }

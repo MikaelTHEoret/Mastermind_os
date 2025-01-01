@@ -67,17 +67,32 @@ interface AIAssistantDB extends DBSchema {
   };
 }
 
-class StorageManager {
-  private db: IDBPDatabase<AIAssistantDB> | null = null;
+const DB_NAME = 'ai-assistant';
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
+class StorageManager {
+  private static instance: StorageManager;
+  private db: IDBPDatabase<AIAssistantDB> | null = null;
   private logger = useLogStore.getState();
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
+  private currentVersion = 1;
 
-  async initialize() {
-    if (this.initialized) return;
+  private constructor() {
+    // Private constructor for singleton
+  }
 
+  static getInstance(): StorageManager {
+    if (!StorageManager.instance) {
+      StorageManager.instance = new StorageManager();
+    }
+    return StorageManager.instance;
+  }
+
+  private async initializeWithRetry(attempt = 1): Promise<void> {
     try {
-      this.db = await openDB<AIAssistantDB>('ai-assistant', 1, {
+      this.db = await openDB<AIAssistantDB>(DB_NAME, this.currentVersion, {
       upgrade(db) {
         // DataFlux store
         const dataFluxStore = db.createObjectStore('dataFlux', {
@@ -114,22 +129,58 @@ class StorageManager {
       },
     });
 
-    this.initialized = true;
-    this.logger.addLog({
-      source: 'StorageManager',
-      type: 'info',
-      message: 'Storage system initialized successfully'
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    this.logger.addLog({
-      source: 'StorageManager',
-      type: 'error',
-      message: `Failed to initialize storage: ${message}`
-    });
-    throw new AppError('Failed to initialize storage system', 'StorageManager', error);
+      this.initialized = true;
+      this.logger.addLog({
+        source: 'StorageManager',
+        type: 'info',
+        message: 'Storage system initialized successfully'
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.addLog({
+        source: 'StorageManager',
+        type: 'error',
+        message: `Failed to initialize storage (attempt ${attempt}): ${message}`
+      });
+
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return this.initializeWithRetry(attempt + 1);
+      }
+
+      throw new AppError(
+        `Failed to initialize storage system after ${MAX_RETRIES} attempts`,
+        'StorageManager',
+        error
+      );
+    }
   }
-}
+
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    // Ensure only one initialization process runs at a time
+    if (!this.initPromise) {
+      this.initPromise = this.initializeWithRetry().finally(() => {
+        this.initPromise = null;
+      });
+    }
+
+    return this.initPromise;
+  }
+
+  async close(): Promise<void> {
+    if (this.db) {
+      await this.db.close();
+      this.db = null;
+      this.initialized = false;
+      this.logger.addLog({
+        source: 'StorageManager',
+        type: 'info',
+        message: 'Storage system closed successfully'
+      });
+    }
+  }
 
   private ensureInitialized() {
     if (!this.initialized || !this.db) {
@@ -262,4 +313,5 @@ class StorageManager {
   }
 }
 
-export const storageManager = new StorageManager();
+// Export the singleton instance
+export const storageManager = StorageManager.getInstance();
