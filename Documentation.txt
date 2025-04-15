@@ -1,0 +1,133 @@
+# Mastermind Codex OS System Documentation
+
+## 1. MCP Server Infrastructure
+
+### 1.1 Database MCP Server (Qdrant-based)
+- **Source Path**: C:\Users\Mik\Documents\Cline\MCP\database-mcp-server
+- **Key Files**:
+  - `src/vector.ts` (Embedding configurations)
+  - `.env` (Contains: QDRANT_URL=http://localhost:6333)
+- **Launch Command**:
+  ```powershell
+  cd C:\Users\Mik\Documents\Cline\MCP\database-mcp-server
+  npm run build
+  node build/index.js
+  ```
+- **Endpoints**:
+  - Vector API: http://localhost:8000/vector
+  - KV Store API: http://localhost:8000/kv
+- **Authentication**: API_KEY stored in system environment variables
+
+### 1.2 Ollama Nexus MCP Server
+- **Source Path**: C:\Users\Mik\Documents\GitHub\Mastermind_Codex_OS_v2\ollama-nexus\mcp-server
+- **Critical Configs**:
+  - `package.json` (Dependencies list)
+  - `src/index.ts` (Server configuration)
+- **Launch Sequence**:
+  ```powershell
+  cd ollama-nexus/mcp-server
+  npm install
+  npm run build
+  node build/index.js
+  ```
+- **Network Configuration**:
+  - Service Port: 8001
+  - Ollama Endpoint: http://localhost:11434
+  - Requires: ANTHROPIC_API_KEY in cline_mcp_settings.json
+
+### 1.3 Claude MCP Server
+- **Source Path**: C:\Users\Mik\Documents\Cline\MCP\claude-mcp-server
+- **Configuration**:
+  - `src/index.ts` (API endpoints)
+  - `cline_mcp_settings.json` (Stores ANTHROPIC_API_KEY)
+- **Activation**:
+  ```powershell
+  cd C:\Users\Mik\Documents\Cline\MCP\claude-mcp-server
+  npm run build
+  node build/index.js
+  ```
+
+## 2. Core System Components
+
+### 2.1 Continuous Inference Backend
+- **Location**: Mastermind_Codex_OS_v2/backend
+- **Key Files**:
+  - `requirements.txt` (Python 3.10 dependencies)
+  - `.env` (NGROK_AUTHTOKEN=your_token_here)
+- **Launch Script**:
+  ```batch
+  :: start-continuous-all.bat
+  python -m uvicorn main:app --reload --port 8000
+  powershell -File run_ngrok_continuous.ps1
+  ```
+
+### 2.2 AI Trading System
+- **Root Directory**: Mastermind_Codex_OS_v2/gpt_trader_assistant
+- **Critical Paths**:
+  - `config/trading_assistant.json` (Trading parameters)
+  - `.env` (BTC_API_KEY, QDRANT_URL)
+- **Execution Flow**:
+  ```powershell
+  cd gpt_trader_assistant
+  python main.py --model llama3-8b --risk 0.35
+  ```
+
+## 3. Network Configuration
+
+### 3.1 Port Matrix
+| Service         | Port  | Protocol | Access Point               |
+|-----------------|-------|----------|----------------------------|
+| Qdrant          | 6333  | TCP      | Localhost only             |
+| Ollama          | 11434 | HTTP     | Local network              |
+| MCP API Gateway | 8001  | HTTP     | 0.0.0.0 (All interfaces)   |
+| Ngrok Dashboard | 4040  | HTTP     | http://localhost:4040      |
+
+### 3.2 Credential Locations
+| Component       | Credential File Path                                  | Key Name             |
+|-----------------|-------------------------------------------------------|----------------------|
+| Claude API      | AppData/Roaming/Code/.../cline_mcp_settings.json      | ANTHROPIC_API_KEY    |
+| BTC Trading     | Mastermind_Codex_OS_v2/gpt_trader_assistant/.env      | BTC_API_KEY          |
+| Ngrok           | Mastermind_Codex_OS_v2/backend/run_ngrok_continuous.ps1 | NGROK_AUTHTOKEN     |
+
+## 4. Diagnostic Procedures
+
+### 4.1 Connectivity Tests
+```powershell
+# Test Vector Store
+$headers = @{"Authorization"="Bearer $env:API_KEY"}
+Invoke-RestMethod -Uri "http://localhost:8000/vector/health" -Headers $headers
+
+# Validate Ollama
+Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method Get
+
+# Check MCP Status
+(Invoke-WebRequest -Uri "http://localhost:8001/health").StatusCode
+```
+
+### 4.2 Log Locations
+- Database MCP: C:\Users\Mik\Documents\Cline\MCP\database-mcp-server\logs
+- Trading System: Mastermind_Codex_OS_v2/gpt_trader_assistant/logs
+- Backend: Mastermind_Codex_OS_v2/backend/server_log.txt
+
+## 5. Launch Script Reference
+
+### 5.1 MCP Startup Sequence
+```powershell
+# Start all MCP servers
+cd C:\Users\Mik\Documents\Cline\MCP\database-mcp-server
+Start-Process -FilePath "node" -ArgumentList "build/index.js"
+
+cd Mastermind_Codex_OS_v2\ollama-nexus\mcp-server
+Start-Process -FilePath "node" -ArgumentList "build/index.js"
+
+cd C:\Users\Mik\Documents\Cline\MCP\claude-mcp-server
+Start-Process -FilePath "node" -ArgumentList "build/index.js"
+```
+
+### 5.2 Full System Startup
+```batch
+:: start-unified.bat
+cd backend
+start start-continuous-all.bat
+cd ..\gpt_trader_assistant
+start python main.py

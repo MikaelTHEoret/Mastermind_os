@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" stroke-width="1.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ec4899" />
+            <stop offset="100%" stop-color="#06b6d4" />
+        </linearGradient>
+    </defs>
+    <path d="M19 7C19 4.23858 15.4183 2 11 2C6.58172 2 3 4.23858 3 7M19 7C19 9.76142 15.4183 12 11 12C6.58172 12 3 9.76142 3 7M19 7V17C19 19.7614 15.4183 22 11 22C6.58172 22 3 19.7614 3 17V7M19 12C19 14.7614 15.4183 17 11 17C6.58172 17 3 14.7614 3 12" stroke="url(#gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

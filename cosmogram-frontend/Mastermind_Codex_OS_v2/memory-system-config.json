@@ -1,0 +1,44 @@
+{
+  "sqlite": {
+    "enabled": true,
+    "database": "codex_memory.db",
+    "tables": [
+      "memory",
+      "collections",
+      "collection_items"
+    ]
+  },
+  "keyValue": {
+    "enabled": true,
+    "database": "kv_store.db"
+  },
+  "vector": {
+    "enabled": false,
+    "database": "vector_store.db",
+    "embeddingModel": "nomic-embed-text"
+  },
+  "ollama": {
+    "enabled": true,
+    "host": "http://localhost:11434",
+    "models": [
+      "nomic-embed-text:latest",
+      "llama2:latest",
+      "nous-hermes2:latest",
+      "mistral:latest",
+      "dolphin-llama3:latest",
+      "llama3.1:latest",
+      "phi:latest",
+      "stable-code:3b-code-q4_0"
+    ],
+    "chatEnabled": false
+  },
+  "mcp": {
+    "servers": [
+      "mastermind",
+      "central-nexus",
+      "database-mcp",
+      "ollama-nexus"
+    ],
+    "memoryServerEnabled": false
+  }
+}

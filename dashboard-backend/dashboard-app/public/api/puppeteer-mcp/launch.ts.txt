@@ -1,0 +1,49 @@
+// /api/puppeteer/launch.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { exec } from 'child_process';
+import path from 'path';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    const { id, module } = req.body;
+    
+    // Map module names to script filenames
+    const moduleMap: Record<string, string> = {
+      "Script Forge": "compile.js",
+      "Codex Memory": "embed.js",
+      "Field Control": "resonance.js",
+      "Observer Stack": "lens.js",
+      // Add more mappings as needed
+    };
+    
+    // Determine which script to run based on module, falling back to ID if no mapping exists
+    const scriptName = moduleMap[module] || `${id}.js`;
+    const scriptPath = path.join(process.cwd(), 'scripts', scriptName);
+    
+    console.log(`Executing script: ${scriptPath}`);
+    
+    exec(`node ${scriptPath}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Execution error: ${error}`);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      console.log(`stdout: ${stdout}`);
+      console.error(`stderr: ${stderr}`);
+      
+      return res.status(200).json({ 
+        success: true, 
+        output: stdout,
+        module: module,
+        scriptUsed: scriptName
+      });
+    });
+  } catch (error) {
+    console.error('Error in launch handler:', error);
+    return res.status(500).json({ error: 'Failed to execute script' });
+  }
+}

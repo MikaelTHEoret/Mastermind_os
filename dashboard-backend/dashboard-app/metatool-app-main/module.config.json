@@ -1,0 +1,14 @@
+{
+  "id": "mcp-manager",
+  "name": "MCP Nexus Controller",
+  "entry": "./dist/module-loader.js",
+  "windowConfig": {
+    "width": 1200,
+    "height": 800,
+    "webPreferences": {
+      "nodeIntegration": false,
+      "contextIsolation": true,
+      "preload": "./preload.js"
+    }
+  }
+}

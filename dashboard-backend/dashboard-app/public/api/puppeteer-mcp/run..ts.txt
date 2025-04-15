@@ -1,0 +1,14 @@
+import type { NextApiRequest, NextApiResponse } from "next";
+import { exec } from "child_process";
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.body;
+
+  // You can run a local puppeteer script here by ID
+  exec(`node puppeteer-scripts/${id}.js`, (error, stdout, stderr) => {
+    if (error) {
+      return res.status(500).json({ error: stderr || error.message });
+    }
+    res.status(200).json({ success: true, output: stdout });
+  });
+}
