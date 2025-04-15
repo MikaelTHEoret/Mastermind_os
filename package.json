@@ -1,21 +1,26 @@
 {
-  "name": "mastermind-codex-os",
+  "name": "nextjs-checkly-template",
   "version": "1.0.0",
-  "description": "Mastermind Codex OS",
   "scripts": {
-    "dev": "cd cosmogram-frontend && npm run dev",
-    "build": "cd cosmogram-frontend && npm run build", 
-    "preview": "cd cosmogram-frontend && npm run preview",
-    "start:backend": "cd backend && python main.py",
-    "start:all": "start-continuous-all.bat"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "private": true,
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.8.0",
-    "@types/next": "^8.0.7",
-    "@types/pg": "^8.11.12",
-    "axios": "^1.8.4",
-    "next": "^15.3.0",
-    "pg": "^8.14.1"
+    "dotenv": "^16.4.7",
+    "next": "15.1.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "checkly": "^4.17.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
