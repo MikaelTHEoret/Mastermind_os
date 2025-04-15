@@ -1,8 +1,12 @@
 {  
   "version": 2,  
-  "framework": "nextjs",  
-  "rootDirectory": "cosmogram-frontend",  
-  "builds": [  
-    { "src": "package.json", "use": "@vercel/next" }  
+  "projectSettings": {  
+    "framework": "nextjs"  
+  },  
+  "outputDirectory": ".next",  
+  "buildCommand": "cd cosmogram-frontend && npm install && npm run build",  
+  "installCommand": "cd cosmogram-frontend && npm install",  
+  "rewrites": [  
+    { "source": "/(.*)", "destination": "/cosmogram-frontend/$1" }  
   ]  
 } 
