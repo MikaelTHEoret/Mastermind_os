@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Mastermind Codex OS",
   "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "preview": "cd frontend && npm run preview",
+    "dev": "cd cosmogram-frontend && npm run dev",
+    "build": "cd cosmogram-frontend && npm run build", 
+    "preview": "cd cosmogram-frontend && npm run preview",
     "start:backend": "cd backend && python main.py",
     "start:all": "start-continuous-all.bat"
   },

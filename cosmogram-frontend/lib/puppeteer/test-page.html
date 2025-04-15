@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puppeteer MCP Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>Puppeteer MCP Test Page</h1>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Click Test</h2>
+            <p>Click the button below to see a message:</p>
+            <button id="clickButton">Click Me</button>
+            <p id="clickResult"></p>
+        </div>
+        
+        <div class="card">
+            <h2>Form Test</h2>
+            <p>Enter your name and submit:</p>
+            <form id="testForm">
+                <input type="text" id="nameInput" placeholder="Enter your name">
+                <br><br>
+                <button type="submit">Submit</button>
+            </form>
+            <p id="formResult"></p>
+        </div>
+    </div>
+
+    <script>
+        // Click test
+        document.getElementById('clickButton').addEventListener('click', function() {
+            document.getElementById('clickResult').textContent = 'Button was clicked at ' + new Date().toLocaleTimeString();
+            console.log('Button clicked!');
+        });
+
+        // Form test
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('nameInput').value;
+            document.getElementById('formResult').textContent = 'Hello, ' + name + '!';
+            console.log('Form submitted with name: ' + name);
+        });
+
+        // Log when page loads
+        console.log('Page loaded at ' + new Date().toLocaleTimeString());
+    </script>
+</body>
+</html>

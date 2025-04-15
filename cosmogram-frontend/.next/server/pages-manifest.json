@@ -1,1 +1,9 @@
-{}
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/api/mastermind-tools": "pages/api/mastermind-tools.js",
+  "/api/mastermind-tools/toggle": "pages/api/mastermind-tools/toggle.js",
+  "/": "pages/index.html",
+  "/_document": "pages/_document.js",
+  "/404": "pages/404.html"
+}
