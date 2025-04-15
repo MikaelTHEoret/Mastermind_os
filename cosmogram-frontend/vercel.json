@@ -1,6 +1,6 @@
 {  
   "framework": "nextjs",  
-  "buildCommand": "next build",  
+  "buildCommand": "./vercel-build.bat",  
   "outputDirectory": ".next",  
   "installCommand": "npm install",  
   "devCommand": "next dev"  
