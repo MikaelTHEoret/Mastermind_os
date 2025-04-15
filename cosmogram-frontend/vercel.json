@@ -1,7 +1,7 @@
 {  
-  "buildCommand": "npm install --save-dev typescript && next build",  
-  "outputDirectory": ".next",  
   "framework": "nextjs",  
+  "buildCommand": "next build",  
+  "outputDirectory": ".next",  
   "installCommand": "npm install",  
   "devCommand": "next dev"  
 }  
