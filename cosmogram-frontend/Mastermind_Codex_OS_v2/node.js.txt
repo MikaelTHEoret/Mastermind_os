@@ -1,8 +1,0 @@
-// Node.js example
-app.get('/list-directory', (req, res) => {
-  const fs = require('fs');
-  const path = req.query.path;
-  if (!fs.existsSync(path)) return res.status(404).send('Path not found');
-  const files = fs.readdirSync(path);
-  res.json({ path, files });
-});
